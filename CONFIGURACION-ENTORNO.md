@@ -5,6 +5,16 @@
 > vive en un solo servicio de Render:
 > `https://abasteceapp-1.onrender.com`.
 
+## Estado actual (11/11/2026)
+
+- APK release **1.2.0+4** exportado en
+  `C:\Users\IPS SALUD Y VIDA\Desktop\app renderizada`.
+- Backend y panel desplegados en Render desde el commit `3fe7c61`.
+- CORS verificado en vivo: preflight `204`, `Access-Control-Max-Age: 86400`.
+- Panel con refresco automático cada 10 s verificado por el hash del bundle.
+- El dispositivo de verificación `dsh-verificacion-final` quedó registrado en
+  el almacén efímero (desaparecerá cuando Render reinicie o despierte).
+
 ---
 
 ## 1. Compilar y exportar a `app renderizada`
