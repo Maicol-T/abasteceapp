@@ -1,0 +1,51 @@
+name: abasteceapp
+description: "AbasteceApp - Sistema offline-first de abastecimiento, logistica y ventas para tenderos de Buenaventura, Colombia."
+publish_to: 'none'
+version: 1.2.0+4
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Traducciones oficiales de Flutter (es_CO).
+  # Sin esto, MaterialLocalizations no existe para es_CO y cualquier TextField
+  # lanza una excepcion que deja la pantalla en blanco.
+  flutter_localizations:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # Estado / inyeccion de dependencias
+  provider: ^6.1.2
+
+  # Persistencia local (offline-first)
+  sqflite: ^2.3.3
+  path: ^1.9.0
+
+  # Conectividad para sincronizacion diferida
+  connectivity_plus: ^6.0.5
+
+  # Cliente HTTP contra la API central del panel administrativo
+  http: ^1.2.2
+
+  # Accesibilidad: comandos de voz en espanol.
+  # 7.1.0 fija compileSdk 34 en su proyecto Android; las versiones 7.3+
+  # asumen `flutter.compileSdkVersion` dentro del plugin, que Flutter 3.24
+  # todavia no expone a los subproyectos de plugins.
+  speech_to_text: ^7.3.0
+
+  # Lectura de codigos de barras
+  mobile_scanner: ^7.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
