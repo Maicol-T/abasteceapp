@@ -16,6 +16,9 @@ analyzer:
     - windows/**
     - macos/**
     - linux/**
+    # Backend Dart independiente que viaja en el repo: tiene su propio pubspec
+    # y se analiza por separado (dart analyze dentro de backend/).
+    - abasteceapp-admin/**
 include: package:flutter_lints/flutter.yaml
 
 linter:

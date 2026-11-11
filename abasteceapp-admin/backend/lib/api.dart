@@ -11,6 +11,7 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
+import 'cors.dart';
 import 'store.dart';
 
 class AdminApi {
@@ -18,7 +19,11 @@ class AdminApi {
     required this.store,
     required this.token,
     this.webRoot,
-  });
+    CorsPolicy? cors,
+  }) : cors = cors ?? CorsPolicy();
+
+  /// Política CORS común a la API y al panel web.
+  final CorsPolicy cors;
 
   final AdminStore store;
 
@@ -36,15 +41,7 @@ class AdminApi {
 
   Future<void> handle(HttpRequest request) async {
     final HttpResponse response = request.response;
-    response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set(
-      'Access-Control-Allow-Methods',
-      'GET, POST, PUT, OPTIONS',
-    );
-    response.headers.set(
-      'Access-Control-Allow-Headers',
-      'Content-Type, Authorization, X-Admin-Token, X-Device-Id',
-    );
+    cors.apply(request, response);
 
     if (request.method == 'OPTIONS') {
       response.statusCode = HttpStatus.noContent;
@@ -54,11 +51,29 @@ class AdminApi {
 
     // El cuerpo se lee siempre antes de responder: si se contesta sin consumirlo
     // (401, 400), el cliente recibe un error de conexión en vez del JSON.
+    // Se limita el tamaño para no agotar la memoria con un cliente defectuoso.
+    if (request.contentLength > 8 * 1024 * 1024) {
+      await _json(response, HttpStatus.requestEntityTooLarge, <String, Object?>{
+        'error': 'El cuerpo de la petición supera los 8 MB.',
+      });
+      return;
+    }
     String rawBody = '';
-    if (request.method == 'POST' || request.method == 'PUT') {
-      rawBody = await utf8.decoder.bind(request).join();
-    } else {
-      await request.drain<void>();
+    try {
+      if (request.method == 'POST' || request.method == 'PUT') {
+        rawBody = await utf8.decoder.bind(request).join();
+      } else {
+        await request.drain<void>();
+      }
+    } catch (error) {
+      try {
+        await _json(response, HttpStatus.badRequest, <String, Object?>{
+          'error': 'No se pudo leer el cuerpo de la petición: $error',
+        });
+      } catch (_) {
+        // El cliente ya cerró la conexión.
+      }
+      return;
     }
 
     final String path = request.uri.path;
@@ -326,6 +341,14 @@ class AdminApi {
       await _json(response, HttpStatus.notFound, <String, Object?>{
         'error': 'Ruta no encontrada: $path',
       });
+    } on FormatException catch (error) {
+      try {
+        await _json(response, HttpStatus.badRequest, <String, Object?>{
+          'error': 'Solicitud inválida: ${error.message}',
+        });
+      } catch (_) {
+        // La respuesta ya estaba cerrada.
+      }
     } catch (error) {
       try {
         await _json(response, HttpStatus.internalServerError, <String, Object?>{

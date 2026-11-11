@@ -106,12 +106,24 @@ class AppConstants {
   static const double formalCashOnDeliveryLimit = 1200000;
 
   // --- API central (panel administrativo) ---
-  /// URL de la API que comparte el panel web.
+  /// URL del backend central que sirve la API y el panel en Render.
   ///
-  /// Vacío = modo local simulado. En el teléfono se configura al compilar:
-  /// `flutter build apk --dart-define=API_BASE_URL=http://192.168.1.10:8080`
-  /// (o `http://10.0.2.2:8080` desde el emulador de Android).
-  static const String apiBaseUrl = String.fromEnvironment('API_BASE_URL');
+  /// La app apunta aquí por defecto, así que cualquier compilación (APK, web o
+  /// escritorio) queda conectada sin pasos extra. Se puede sobreescribir con
+  /// `flutter build apk --dart-define=API_BASE_URL=https://otro-host`.
+  static const String apiBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'https://abasteceapp-1.onrender.com',
+  );
+
+  /// Intervalo de sondeo del panel mientras la app está en primer plano.
+  ///
+  /// Mantiene decisiones y registros al día sin pulsar "sincronizar"; 15 s no
+  /// satura el plan gratuito de Render.
+  static const Duration syncPollInterval = Duration(seconds: 15);
+
+  /// Espera máxima por petición (arranque en frío de Render: 30-60 s).
+  static const Duration apiTimeout = Duration(seconds: 60);
 
   /// Tamaño del lote de sincronización por envío.
   static const int syncBatchSize = 300;

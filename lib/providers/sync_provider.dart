@@ -1,7 +1,8 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
+import '../constants/app_constants.dart';
 import '../database/database_helper.dart';
 import '../models/admin_sync.dart';
 import '../models/sync_status.dart';
@@ -13,7 +14,11 @@ import '../services/sync_service.dart';
 /// Es el "sync manager" de la app: escucha `ConnectivityService`, refresca los
 /// contadores y, cuando el teléfono vuelve a tener internet, envía la cola en
 /// segundo plano sin bloquear la interfaz.
-class SyncProvider extends ChangeNotifier {
+///
+/// Además sondea al panel cada [AppConstants.syncPollInterval] mientras la app
+/// está en primer plano, de modo que las decisiones del administrador y los
+/// registros de otros teléfonos se reflejen sin pulsar "sincronizar".
+class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
   SyncProvider({
     required SyncService service,
     required DatabaseHelper database,
@@ -21,16 +26,21 @@ class SyncProvider extends ChangeNotifier {
   })  : _service = service,
         _database = database {
     _subscription = connectivity?.onStatusChange.listen(_handleConnectivity);
+    // Idempotente: si ya lo inicio ConnectivityProvider, no hace nada.
+    connectivity?.start();
+    WidgetsBinding.instance.addObserver(this);
     unawaited(refreshPending());
     if (service.isRemote) {
       // Al abrir la app se jala el estado del panel (decisiones y reglas).
       unawaited(syncNow());
+      _startLiveSync();
     }
   }
 
   final SyncService _service;
   final DatabaseHelper _database;
   StreamSubscription<bool>? _subscription;
+  Timer? _liveTimer;
 
   bool _isSyncing = false;
   Map<SyncEntity, int> _pendingByEntity = <SyncEntity, int>{
@@ -87,12 +97,13 @@ class SyncProvider extends ChangeNotifier {
 
   /// Envío manual desde un botón de la interfaz.
   ///
-  /// Devuelve `null` si ya había un envío activo.
-  Future<SyncReport?> syncNow() async {
+  /// Devuelve `null` si ya había un envío activo. Con [silent] el sondeo en
+  /// vivo no muestra el indicador de carga para no parpadear cada 20 s.
+  Future<SyncReport?> syncNow({bool silent = false}) async {
     if (_isSyncing) return null;
     _isSyncing = true;
     _error = null;
-    notifyListeners();
+    if (!silent) notifyListeners();
     try {
       final SyncReport report = await _service.syncNow();
       _lastReport = report;
@@ -125,8 +136,42 @@ class SyncProvider extends ChangeNotifier {
     await syncNow();
   }
 
+  /// Sondeo periódico: empuja la cola y jala decisiones/reglas del panel.
+  Future<void> _pollRemote() async {
+    if (!_service.isRemote || _isSyncing) return;
+    await syncNow(silent: true);
+  }
+
+  void _startLiveSync() {
+    if (!_service.isRemote) return;
+    _liveTimer?.cancel();
+    _liveTimer = Timer.periodic(
+      AppConstants.syncPollInterval,
+      (_) => unawaited(_pollRemote()),
+    );
+  }
+
+  void _stopLiveSync() {
+    _liveTimer?.cancel();
+    _liveTimer = null;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!_service.isRemote) return;
+    if (state == AppLifecycleState.resumed) {
+      _startLiveSync();
+      unawaited(_pollRemote());
+    } else {
+      // En segundo plano no se sondea: ahorra batería y datos móviles.
+      _stopLiveSync();
+    }
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _stopLiveSync();
     unawaited(_subscription?.cancel());
     _subscription = null;
     _service.dispose();

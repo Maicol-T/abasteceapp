@@ -15,6 +15,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:abastece_admin_backend/api.dart';
+import 'package:abastece_admin_backend/cors.dart';
 import 'package:abastece_admin_backend/store.dart';
 
 Future<void> main(List<String> args) async {
@@ -32,10 +33,13 @@ Future<void> main(List<String> args) async {
   final AdminStore store = AdminStore(file: File(dataPath));
   await store.load();
 
+  final CorsPolicy cors = CorsPolicy.fromEnvironment();
+
   final AdminApi api = AdminApi(
     store: store,
     token: token,
     webRoot: webPath == null ? null : Directory(webPath),
+    cors: cors,
   );
 
   final HttpServer server = await HttpServer.bind(host, port);
@@ -45,6 +49,10 @@ Future<void> main(List<String> args) async {
   stdout.writeln('AbasteceApp API escuchando en http://localhost:$port$suffix');
   stdout.writeln('Datos: $dataPath');
   stdout.writeln('Token de administrador: $token');
+  final String corsLabel = cors.allowedOrigins.contains('*')
+      ? 'cualquier origen (*)'
+      : cors.allowedOrigins.join(', ');
+  stdout.writeln('CORS: $corsLabel');
 
   await for (final HttpRequest request in server) {
     unawaited(api.handle(request));
