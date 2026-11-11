@@ -1,0 +1,4 @@
+.dart_tool/
+data/*.json
+*.log
+server.log

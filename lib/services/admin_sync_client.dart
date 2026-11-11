@@ -27,7 +27,8 @@ class AdminSyncClient {
   final String _baseUrl;
   final http.Client _client;
 
-  static const Duration _timeout = Duration(seconds: 15);
+  /// Tolerante al arranque en frío de un servicio gratuito (30–60 s).
+  static const Duration _timeout = Duration(seconds: 45);
 
   static String _normalize(String value) {
     String url = value.trim();

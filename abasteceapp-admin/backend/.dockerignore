@@ -1,0 +1,9 @@
+# Archivos que no deben viajar a la imagen de Render.
+.dart_tool/
+build/
+test/
+.git/
+.gitignore
+*.log
+server.log
+data/*.json
