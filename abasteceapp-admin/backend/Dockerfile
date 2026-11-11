@@ -12,7 +12,7 @@ RUN dart pub get
 
 COPY bin ./bin
 COPY lib ./lib
-RUN dart compile exe bin/server.dart -o /out/server
+RUN mkdir -p /out && dart compile exe bin/server.dart -o /out/server
 
 # ---- 2. Runtime mínimo ----
 FROM debian:bookworm-slim
